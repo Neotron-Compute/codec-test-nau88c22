@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "codec-test-nau88c22")(type "KiCad")(uri "${KIPRJMOD}/codec-test-nau88c22.kicad_sym")(options "")(descr ""))
+)

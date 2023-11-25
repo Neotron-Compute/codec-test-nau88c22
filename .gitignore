@@ -1,0 +1,5 @@
+docs/
+*bak
+*.xml
+codec-test-nau88c22-backups/
+
