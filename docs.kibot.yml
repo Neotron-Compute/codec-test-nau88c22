@@ -103,7 +103,6 @@ outputs:
       exclude_filter: 'only_fitted_parts'
       html:
         datasheet_as_link: "Datasheet"
-        digikey_link: "Digikey"
         title: "CODEC Test NAU88C22 Bill of Materials"
       group_fields:
         - 'Part'
@@ -124,8 +123,6 @@ outputs:
           join: ['voltage', 'current', 'power', 'tolerance']
         - field: 'LCSC Part#'
           name: LCSC
-        - Digikey
-        - Mouser
         - Footprint
       output: '%f-%r-bom.%x'
 
@@ -136,44 +133,6 @@ outputs:
       dnf_filter: 'only_fitted_parts'
       output: '%f-%r-ibom.%x'
       extra_fields: "Voltage,Tolerance,Manufacturer,MPN,LCSC Part#"
-
-  - name: 'make_octopart_bom'
-    comment: 'Make a bill-of-materials you can upload to https://octopart.com/'
-    type: 'kibom'
-    options:
-      conf:
-        columns:
-          - References
-          - Description
-          - Part
-          - Value
-          - field: Quantity Per PCB
-            name: Qty
-        component_aliases: [['r', 'r_small', 'res', 'resistor'], ['l', 'l_small', 'inductor'], ['c', 'c_small', 'cap', 'capacitor'], ['sw', 'switch'], ['zener', 'zenersmall'], ['d', 'diode', 'd_small']]
-        datasheet_as_link: ''
-        digikey_link: ''
-        exclude_any:
-          - column: Part
-            regex: TestPoint
-          - column: Part
-            regex: LOGO
-          - column: Part
-            regex: Jumper
-        fit_field: 'Config'
-        group_connectors: true
-        hide_headers: false
-        hide_pcb_info: true
-        html_generate_dnf: true
-        ignore_dnf: true
-        merge_blank_fields: false
-        number_rows: false
-        test_regex: true
-        use_alt: false
-      format: 'CSV'
-      number: 1
-      output: '%f-%r-bom-octopart.%x'
-      separator: ';'
-      variant: ''
 
   - name: 'make_jlcpcb_zip'
     comment: 'Make a ZIP file you can upload to JLCPCB'
