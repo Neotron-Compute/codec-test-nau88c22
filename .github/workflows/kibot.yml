@@ -24,17 +24,6 @@ env:
   dir: "docs"
 
 jobs:
-  DRC:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/inti-cmnb/kicad6_auto:1.6.1
-    steps:
-      - uses: actions/checkout@v3
-        with:
-            submodules: true
-      - name: Run KiBot for DRC
-        run: |
-          kibot -c docs.kibot.yml -e ${{env.schema}} -b ${{env.board}} -d ${{env.dir}} -s run_drc -v -i
   ERC:
     runs-on: ubuntu-latest
     container:
@@ -44,6 +33,17 @@ jobs:
         with:
             submodules: true
       - name: Run KiBot for ERC
+        run: |
+          kibot -c docs.kibot.yml -e ${{env.schema}} -b ${{env.board}} -d ${{env.dir}} -s run_drc -v -i
+  DRC:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/inti-cmnb/kicad6_auto:1.6.1
+    steps:
+      - uses: actions/checkout@v3
+        with:
+            submodules: true
+      - name: Run KiBot for DRC
         run: |
           kibot -c docs.kibot.yml -e ${{env.schema}} -b ${{env.board}} -d ${{env.dir}} -s run_erc -v -i
   build:
