@@ -42,35 +42,6 @@ impl Player {
         }
         count
     }
-
-    /// Queue some 16-bit mono samples for playback.
-    ///
-    /// Takes as many as will fit in the FIFO. Returns how many bytes were
-    /// taken, which will always be a multiple of 2 because it always takes them
-    /// in Little Endian 16-bit mono, and duplicates them as they go into the
-    /// FIFO.
-    ///
-    /// The length of `samples` must be a multiple of 2, as they should be
-    /// 16-bit mono samples.
-    pub fn play_samples_16bit_mono(&mut self, samples: &[u8]) -> usize {
-        let mut count = 0;
-        for samples in samples.chunks_exact(2) {
-            if self.fifo.ready() {
-                let mono_sample = (samples[1] as u32) << 8 | (samples[0] as u32);
-                let stereo_sample = mono_sample << 16 | mono_sample;
-                self.fifo.enqueue(stereo_sample).unwrap();
-                count += 2;
-            } else {
-                break;
-            }
-        }
-        count
-    }
-
-    /// Space, in stereo samples.
-    pub fn available_space(&self) -> usize {
-        self.fifo.capacity() - self.fifo.len()
-    }
 }
 
 /// Initialise PIO1 to produce I2S audio.
@@ -89,40 +60,40 @@ pub fn init(pio: super::pac::PIO1, resets: &mut super::pac::RESETS) -> Player {
 
         // 1. Spin until L word starts (LRCLK goes from low to high).
 
-        "wait 0 pin 6"         // Wait for LRCLK low
-        "wait 1 pin 6"         // Wait for LRCLK high
+        "wait 1 pin 6"         // Wait for LRCLK low
+        "wait 0 pin 6"         // Wait for LRCLK high
 
         // 2. Skip dummy bit (which comes after LRCLK transition)
 
         "set x, 15"            // Set loop count whilst we wait (it's free)
-        "wait 0 pin 5"         // Wait for BCLK to finish going low
-        "wait 1 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
+        // "wait 1 pin 5"         // Wait for BCLK to finish going low
+        // "wait 0 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
 
         // 3. Read/Write 16 bits of left channel data
 
         "left_loop:"
-        "  wait 0 pin 5"       // Wait for BCLK falling edge (start of bit)
+        "  wait 1 pin 5"       // Wait for BCLK falling edge (start of bit)
         "  out pins, 1"        // Write DAC bit
-        "  wait 1 pin 5"       // Wait for BCLK rising edge (middle of bit)
+        "  wait 0 pin 5"       // Wait for BCLK rising edge (middle of bit)
         "  in pins, 1"         // Read ADC bit
         "  jmp x-- left_loop"  // Repeat until x is 0 (runs for N + 1 loops)
 
         // 4. Spin until R word starts (LRCLK goes low)
 
-        "wait 0 pin 6"         // Wait for LRCLK low
+        "wait 1 pin 6"         // Wait for LRCLK low
 
         // 5. Skip dummy bit (which comes after LRCLK transition)
 
         "set x, 15"            // Set loop count whilst we wait (it's free)
-        "wait 0 pin 5"         // Wait for BCLK to finish going low
-        "wait 1 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
+        // "wait 1 pin 5"         // Wait for BCLK to finish going low
+        // "wait 0 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
 
         // 6. Read/Write 16 bits of left channel data
 
         "right_loop:"
-        "  wait 0 pin 5"       // Wait for BCLK falling edge (start of bit)
+        "  wait 1 pin 5"       // Wait for BCLK falling edge (start of bit)
         "  out pins, 1"        // Write DAC bit
-        "  wait 1 pin 5"       // Wait for BCLK rising edge (middle of bit)
+        "  wait 0 pin 5"       // Wait for BCLK rising edge (middle of bit)
         "  in pins, 1"         // Read ADC bit
         "  jmp x-- right_loop" // Repeat until x is 0 (runs for N + 1 loops)
 
@@ -138,7 +109,7 @@ pub fn init(pio: super::pac::PIO1, resets: &mut super::pac::RESETS) -> Player {
     // L00 is the LSB of the left word, L15 is the MSB of the left word.
     //
     // There is one dummy bit after the LRCLK edge. There may be more than 17 bit-clocks in each
-    // phase of the LRCLK signal - ignore any extra bits. In fact on the NAU88C22 we get
+    // phase of the LRCLK signal - ignore any extra bits. In fact on the TLV320AIC23B we get
     // a total of 125 bit-clocks for the left and another 125 bit-clocks for the right because
     // the bit clock is 12 MHz and the LRCLK is 48 kHz.
     //
@@ -156,16 +127,16 @@ pub fn init(pio: super::pac::PIO1, resets: &mut super::pac::RESETS) -> Player {
     //                  │  └── Read ADC on rising BCLK
     //                  └── Update DAC on falling BCLK
     //
-    // ADC in (CODEC-to-Pico) is GPIO22 (index 0)
-    // DAC out (Pico-to-CODEC) is GPIO26 (index 4)
-    // BCLK is GPIO27 (index 5)
-    // LRCLK is GPIO28 (index 6)
+    // ADC (CODEC-to-Pico) is GPIO25
+    // DAC (Pico-to-CODEC) is GPIO26
+    // BCLK is GPIO27
+    // LRCLK is GPIO28
 
     let samples_installed = pio.install(&samples_program.program).unwrap();
     let (mut samples_sm, _sample_rx_fifo, pio_tx_fifo) =
         rp_pico::hal::pio::PIOBuilder::from_program(samples_installed)
             .buffers(rp_pico::hal::pio::Buffers::RxTx)
-            .out_pins(26, 1) // DAC out is GPIO26
+            .out_pins(26, 1) // output to DAC is GPIO26
             .in_pin_base(22)
             .autopull(false)
             .autopush(false)

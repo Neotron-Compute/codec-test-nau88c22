@@ -1,6 +1,52 @@
-//! Blinks the LED on a Pico board
+//! NAU88C22 CODEC test
 //!
-//! This will blink an LED attached to GP25, which is the pin the Pico uses for the on-board LED.
+//! Requires wiring up a Raspberry Pi Pico as follows:
+//!
+//! ```text
+//!         +----------------+
+//! UART TX<|GP0         VBUS|
+//! UART RX>|GP1         VSYS|
+//!         |GND          GND|
+//!         |GP2       3V3_EN|
+//!         |GP3          3V3|
+//!         |GP4     ADC_VREF|
+//!         |GP5         GP28|<I2S_FS
+//!         |GND         AGND|
+//!         |GP6         GP27|<I2S_BCLK
+//!         |GP7         GP26|>I2C_DAC
+//!         |GP8          RUN|
+//!         |GP9         GP22|<I2S_ADC
+//!         |GND          GND|
+//!         |GP10        GP21|
+//!         |GP11        GP20|
+//!         |GP12        GP19|
+//!         |GP13        GP18|
+//!         |GND          GND|
+//!    SDA<>|GP14        GP17|
+//!     SCL<|GP15        GP16|
+//!         +----------------+
+//! ```
+//!
+//! * `I2S_FS` goes to J3 Pin 2
+//! * `I2S_BCLK` goes to J3 Pin 4
+//! * `I2S_ADC` goes to J3 Pin 6
+//! * `I2S_DAC` goes to J3 Pin 8
+//! * Leave J3 Pin 10 unconnected
+//! * `SDA` goes to J4 Pin 6
+//! * `SCL` goes to J4 Pin 4
+//! * Fit a jumper across J4 Pin 7 and Pin 8, to select I2C mode
+//! * Leave J4 Pin 2 unconnected
+//!
+//! Currently I am clocking out 0xABCD
+//!
+//! On the scope this looks like:
+//!
+//! 0b1010_1011_1100_1101 = ABCD
+//!
+//! But it's changing on rising clock.
+//! LRCLK falls on a falling clock edge.
+//! We first start outputting the data on the second rising edge after LRCLK.
+
 #![no_std]
 #![no_main]
 
@@ -15,10 +61,8 @@ use rp2040_hal::{
     gpio::{FunctionPio1, Pin, PullNone},
     uart::UartConfig,
 };
-// Provide an alias for our BSP so we can switch targets quickly.
-// Uncomment the BSP you included in Cargo.toml, the rest of the code does not need to change.
+
 use rp_pico as bsp;
-// use sparkfun_pro_micro_rp2040 as bsp;
 
 use bsp::hal::{
     clocks::{init_clocks_and_plls, Clock},
@@ -31,8 +75,6 @@ use bsp::hal::{
 mod i2s;
 
 static CLIP: [u8; 403052] = *include_bytes!("test audio.raw");
-
-// static CLIP: [u32; 64] = [0x12345678; 64];
 
 #[entry]
 fn main() -> ! {
@@ -97,13 +139,15 @@ fn main() -> ! {
         &clocks.system_clock,
     );
 
-    let _i2s_adc_data: Pin<rp2040_hal::gpio::bank0::Gpio22, FunctionPio1, PullNone> =
+    let _i2s_adc_data: Pin<bsp::hal::gpio::bank0::Gpio22, FunctionPio1, PullNone> =
         pins.gpio22.reconfigure();
-    let _i2s_dac_data: Pin<rp2040_hal::gpio::bank0::Gpio26, FunctionPio1, PullNone> =
+    let mut i2s_dac_data: Pin<bsp::hal::gpio::bank0::Gpio26, FunctionPio1, PullNone> =
         pins.gpio26.reconfigure();
-    let _i2s_bit_clock: Pin<rp2040_hal::gpio::bank0::Gpio27, FunctionPio1, PullNone> =
+    i2s_dac_data.set_drive_strength(bsp::hal::gpio::OutputDriveStrength::EightMilliAmps);
+    i2s_dac_data.set_slew_rate(bsp::hal::gpio::OutputSlewRate::Fast);
+    let _i2s_bit_clock: Pin<bsp::hal::gpio::bank0::Gpio27, FunctionPio1, PullNone> =
         pins.gpio27.reconfigure();
-    let _i2s_lr_clock: Pin<rp2040_hal::gpio::bank0::Gpio28, FunctionPio1, PullNone> =
+    let _i2s_lr_clock: Pin<bsp::hal::gpio::bank0::Gpio28, FunctionPio1, PullNone> =
         pins.gpio28.reconfigure();
 
     let mut player = i2s::init(pac.PIO1, &mut pac.RESETS);
@@ -111,7 +155,7 @@ fn main() -> ! {
         cortex_m::interrupt::enable();
     }
 
-    let mut codec = nau88c22::Codec::new(i2c, Some(12_000_000));
+    let mut codec = nau88c22::Codec::new(i2c, Some(12_288_000));
 
     let _ = codec.reset();
 
@@ -1871,7 +1915,7 @@ fn parse_integer(s: &str) -> Result<u16, ParseIntError> {
     if let Some(hex) = s.strip_prefix("0x") {
         u16::from_str_radix(hex, 16)
     } else {
-        u16::from_str_radix(s, 10)
+        s.parse()
     }
 }
 
