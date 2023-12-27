@@ -7,27 +7,18 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
-embedded-hal = { version = "0.2.5", features = ["unproven"] }
-
+critical-section = "1.1.2"
 defmt = "0.3"
 defmt-rtt = "0.4"
-panic-probe = { version = "0.3", features = ["print-defmt"] }
-
-# We're using a Pico by default on this template
-rp-pico = "0.8"
-nau88c22 = { git = "https://github.com/thejpster/nau88c22", branch="hardware-fixes", features = ["defmt"] }
-rp2040-hal = { version = "0.9", features = ["eh1_0_alpha"] }
-critical-section = "1.1.2"
+embedded-hal = { version = "0.2.5", features = ["unproven"] }
 heapless = "0.8.0"
-pio-proc = "0.2.2"
+nau88c22 = { git = "https://github.com/thejpster/nau88c22", branch="hardware-fixes", features = ["defmt"] }
+nb = "0.1"
+panic-probe = { version = "0.3", features = ["print-defmt"] }
 pio = "0.2.1"
-
-# but you can use any BSP. Uncomment this to use the pro_micro_rp2040 BSP instead
-# sparkfun-pro-micro-rp2040 = "0.6"
-
-# If you're not going to use a Board Support Package you'll need these:
-# rp2040-hal = { version="0.8", features=["rt", "critical-section-impl"] }
-# rp2040-boot2 = "0.2"
+pio-proc = "0.2.2"
+rp-pico = "0.8"
+rp2040-hal = { version = "0.9", features = ["eh1_0_alpha"] }
 
 # cargo build/run
 [profile.dev]

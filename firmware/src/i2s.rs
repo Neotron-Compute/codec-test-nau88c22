@@ -156,10 +156,10 @@ pub fn init(pio: super::pac::PIO1, resets: &mut super::pac::RESETS) -> Player {
     //                  │  └── Read ADC on rising BCLK
     //                  └── Update DAC on falling BCLK
     //
-    // ADC in (CODEC-to-Pico) is GPIO22
-    // DAC out (Pico-to-CODEC) is GPIO26
-    // BCLK is GPIO27
-    // LRCLK is GPIO28
+    // ADC in (CODEC-to-Pico) is GPIO22 (index 0)
+    // DAC out (Pico-to-CODEC) is GPIO26 (index 4)
+    // BCLK is GPIO27 (index 5)
+    // LRCLK is GPIO28 (index 6)
 
     let samples_installed = pio.install(&samples_program.program).unwrap();
     let (mut samples_sm, _sample_rx_fifo, pio_tx_fifo) =
