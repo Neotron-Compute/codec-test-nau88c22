@@ -60,40 +60,40 @@ pub fn init(pio: super::pac::PIO1, resets: &mut super::pac::RESETS) -> Player {
 
         // 1. Spin until L word starts (LRCLK goes from low to high).
 
-        "wait 0 pin 6"         // Wait for LRCLK low
-        "wait 1 pin 6"         // Wait for LRCLK high
+        "wait 0 gpio 28"       // Wait for LRCLK low
+        "wait 1 gpio 28"       // Wait for LRCLK high
 
         // 2. Skip dummy bit (which comes after LRCLK transition)
 
         "set x, 15"            // Set loop count whilst we wait (it's free)
-        "wait 0 pin 5"         // Wait for BCLK to finish going low
-        "wait 1 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
+        "wait 0 gpio 27"       // Wait for BCLK to finish going low
+        "wait 1 gpio 27"       // Wait for BCLK rising edge (middle of the dummy bit)
 
         // 3. Read/Write 16 bits of left channel data
 
         "left_loop:"
-        "  wait 0 pin 5"       // Wait for BCLK falling edge (start of bit)
+        "  wait 0 gpio 27"     // Wait for BCLK falling edge (start of bit)
         "  out pins, 1"        // Write DAC bit
-        "  wait 1 pin 5"       // Wait for BCLK rising edge (middle of bit)
+        "  wait 1 gpio 27"     // Wait for BCLK rising edge (middle of bit)
         "  in pins, 1"         // Read ADC bit
         "  jmp x-- left_loop"  // Repeat until x is 0 (runs for N + 1 loops)
 
         // 4. Spin until R word starts (LRCLK goes low)
 
-        "wait 0 pin 6"         // Wait for LRCLK low
+        "wait 0 gpio 28"       // Wait for LRCLK low
 
         // 5. Skip dummy bit (which comes after LRCLK transition)
 
         "set x, 15"            // Set loop count whilst we wait (it's free)
-        "wait 0 pin 5"         // Wait for BCLK to finish going low
-        "wait 1 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
+        "wait 0 gpio 27"       // Wait for BCLK to finish going low
+        "wait 1 gpio 27"       // Wait for BCLK rising edge (middle of the dummy bit)
 
         // 6. Read/Write 16 bits of left channel data
 
         "right_loop:"
-        "  wait 0 pin 5"       // Wait for BCLK falling edge (start of bit)
+        "  wait 0 gpio 27"     // Wait for BCLK falling edge (start of bit)
         "  out pins, 1"        // Write DAC bit
-        "  wait 1 pin 5"       // Wait for BCLK rising edge (middle of bit)
+        "  wait 1 gpio 27"     // Wait for BCLK rising edge (middle of bit)
         "  in pins, 1"         // Read ADC bit
         "  jmp x-- right_loop" // Repeat until x is 0 (runs for N + 1 loops)
 
@@ -108,10 +108,13 @@ pub fn init(pio: super::pac::PIO1, resets: &mut super::pac::RESETS) -> Player {
     // R00 is the LSB of the right word, R15 is the MSB of the right word.
     // L00 is the LSB of the left word, L15 is the MSB of the left word.
     //
-    // There is one dummy bit after the LRCLK edge. There may be more than 17 bit-clocks in each
-    // phase of the LRCLK signal - ignore any extra bits. In fact on the TLV320AIC23B we get
-    // a total of 125 bit-clocks for the left and another 125 bit-clocks for the right because
-    // the bit clock is 12 MHz and the LRCLK is 48 kHz.
+    // There is one dummy bit after the LRCLK edge. There may be more than 17
+    // bit-clocks in each phase of the LRCLK signal - ignore any extra bits. In
+    // fact on the NAU88C22 we get a total of 128 bit-clocks for the left and
+    // another 128 bit-clocks for the right because the bit clock is 12.288 MHz
+    // and the LRCLK is 48 kHz. Unless we divide down the BCLK using the
+    // `clockcontrol1.bclksel` register of course (and right now we use ÷ 4,
+    // which gives 32 bit-clocks per channel).
     //
     // DAC   :  ..┬──┬──┬──┬──┬──┬──┬──┬──┬...┬──┬──┬──┬──┬──┬──┬...┬──┬──┬──┬──┬──┬──┬..
     //       :    │ Pad │ L15 │ L14 │ L13 │   │ L02 │ L01 │ L00 │   │ Pad │ R15 │ R14 │
@@ -127,7 +130,7 @@ pub fn init(pio: super::pac::PIO1, resets: &mut super::pac::RESETS) -> Player {
     //                  │  └── Read ADC on rising BCLK
     //                  └── Update DAC on falling BCLK
     //
-    // ADC (CODEC-to-Pico) is GPIO25
+    // ADC (CODEC-to-Pico) is GPIO22
     // DAC (Pico-to-CODEC) is GPIO26
     // BCLK is GPIO27
     // LRCLK is GPIO28
