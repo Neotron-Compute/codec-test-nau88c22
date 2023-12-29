@@ -60,40 +60,40 @@ pub fn init(pio: super::pac::PIO1, resets: &mut super::pac::RESETS) -> Player {
 
         // 1. Spin until L word starts (LRCLK goes from low to high).
 
-        "wait 1 pin 6"         // Wait for LRCLK low
-        "wait 0 pin 6"         // Wait for LRCLK high
+        "wait 0 pin 6"         // Wait for LRCLK low
+        "wait 1 pin 6"         // Wait for LRCLK high
 
         // 2. Skip dummy bit (which comes after LRCLK transition)
 
         "set x, 15"            // Set loop count whilst we wait (it's free)
-        // "wait 1 pin 5"         // Wait for BCLK to finish going low
-        // "wait 0 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
+        "wait 0 pin 5"         // Wait for BCLK to finish going low
+        "wait 1 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
 
         // 3. Read/Write 16 bits of left channel data
 
         "left_loop:"
-        "  wait 1 pin 5"       // Wait for BCLK falling edge (start of bit)
+        "  wait 0 pin 5"       // Wait for BCLK falling edge (start of bit)
         "  out pins, 1"        // Write DAC bit
-        "  wait 0 pin 5"       // Wait for BCLK rising edge (middle of bit)
+        "  wait 1 pin 5"       // Wait for BCLK rising edge (middle of bit)
         "  in pins, 1"         // Read ADC bit
         "  jmp x-- left_loop"  // Repeat until x is 0 (runs for N + 1 loops)
 
         // 4. Spin until R word starts (LRCLK goes low)
 
-        "wait 1 pin 6"         // Wait for LRCLK low
+        "wait 0 pin 6"         // Wait for LRCLK low
 
         // 5. Skip dummy bit (which comes after LRCLK transition)
 
         "set x, 15"            // Set loop count whilst we wait (it's free)
-        // "wait 1 pin 5"         // Wait for BCLK to finish going low
-        // "wait 0 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
+        "wait 0 pin 5"         // Wait for BCLK to finish going low
+        "wait 1 pin 5"         // Wait for BCLK rising edge (middle of the dummy bit)
 
         // 6. Read/Write 16 bits of left channel data
 
         "right_loop:"
-        "  wait 1 pin 5"       // Wait for BCLK falling edge (start of bit)
+        "  wait 0 pin 5"       // Wait for BCLK falling edge (start of bit)
         "  out pins, 1"        // Write DAC bit
-        "  wait 0 pin 5"       // Wait for BCLK rising edge (middle of bit)
+        "  wait 1 pin 5"       // Wait for BCLK rising edge (middle of bit)
         "  in pins, 1"         // Read ADC bit
         "  jmp x-- right_loop" // Repeat until x is 0 (runs for N + 1 loops)
 

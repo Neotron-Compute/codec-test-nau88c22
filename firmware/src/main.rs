@@ -239,11 +239,13 @@ fn main() -> ! {
     // Set to "clock output" mode
     codec
         .modify_clockcontrol1(|mut w| {
-            // MCLK pin is clock source
+            // MCLK pin is clock source, not PLL
             w.clkm_set(false);
-            // divide by 0 to get Fs = 48 kHz x 256
+            // divide MCLK by 1 to get Fs = 48 kHz x 256 = 12.288 MHz
             w.mclksel_set(0);
-            // Set to be clock output
+            // lower the BCLK, 2 => BCLK = Fs ÷ 4 => BCLK = 3.072 MHz
+            w.bclksel_set(2);
+            // Set to be clock output (so called 'Master' mode)
             w.clkioen_set(true);
             w
         })
