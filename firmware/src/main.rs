@@ -50,27 +50,16 @@
 #![no_std]
 #![no_main]
 
-use bsp::entry;
 use core::{fmt::Write, num::ParseIntError};
+
+use bsp::entry;
+use bsp::hal::{self, clocks::Clock, fugit::RateExtU32, gpio, pac, sio, uart, watchdog};
+use rp_pico as bsp;
+
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::{digital::v2::ToggleableOutputPin, serial::Read};
 use panic_probe as _;
-
-use rp2040_hal::{
-    gpio::{FunctionPio1, Pin, PullNone},
-    uart::UartConfig,
-};
-
-use rp_pico as bsp;
-
-use bsp::hal::{
-    clocks::{init_clocks_and_plls, Clock},
-    fugit::RateExtU32,
-    pac,
-    sio::Sio,
-    watchdog::Watchdog,
-};
 
 mod i2s;
 
@@ -81,12 +70,12 @@ fn main() -> ! {
     info!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();
     let core = pac::CorePeripherals::take().unwrap();
-    let mut watchdog = Watchdog::new(pac.WATCHDOG);
-    let sio = Sio::new(pac.SIO);
+    let mut watchdog = watchdog::Watchdog::new(pac.WATCHDOG);
+    let sio = sio::Sio::new(pac.SIO);
 
     // External high-speed crystal on the pico board is 12Mhz
     let external_xtal_freq_hz = 12_000_000u32;
-    let clocks = init_clocks_and_plls(
+    let clocks = hal::clocks::init_clocks_and_plls(
         external_xtal_freq_hz,
         pac.XOSC,
         pac.CLOCKS,
@@ -110,12 +99,12 @@ fn main() -> ! {
     // Use UART for the menu interface
     let tx_pin = pins.gpio0.into_function();
     let rx_pin = pins.gpio1.into_function();
-    let uart = bsp::hal::uart::UartPeripheral::new(pac.UART0, (tx_pin, rx_pin), &mut pac.RESETS);
-    let config = UartConfig::new(
+    let uart = uart::UartPeripheral::new(pac.UART0, (tx_pin, rx_pin), &mut pac.RESETS);
+    let config = uart::UartConfig::new(
         115200.Hz(),
-        bsp::hal::uart::DataBits::Eight,
+        uart::DataBits::Eight,
         None,
-        bsp::hal::uart::StopBits::One,
+        uart::StopBits::One,
     );
     let mut uart = uart
         .enable(config, clocks.system_clock.freq())
@@ -130,7 +119,7 @@ fn main() -> ! {
     let sda_pin = pins.gpio14.into_function();
     let scl_pin = pins.gpio15.into_function();
 
-    let i2c = bsp::hal::I2C::i2c1(
+    let i2c = hal::I2C::i2c1(
         pac.I2C1,
         sda_pin,
         scl_pin,
@@ -139,15 +128,15 @@ fn main() -> ! {
         &clocks.system_clock,
     );
 
-    let _i2s_adc_data: Pin<bsp::hal::gpio::bank0::Gpio22, FunctionPio1, PullNone> =
+    let _i2s_adc_data: gpio::Pin<gpio::bank0::Gpio22, gpio::FunctionPio1, gpio::PullNone> =
         pins.gpio22.reconfigure();
-    let mut i2s_dac_data: Pin<bsp::hal::gpio::bank0::Gpio26, FunctionPio1, PullNone> =
+    let mut i2s_dac_data: gpio::Pin<gpio::bank0::Gpio26, gpio::FunctionPio1, gpio::PullNone> =
         pins.gpio26.reconfigure();
-    i2s_dac_data.set_drive_strength(bsp::hal::gpio::OutputDriveStrength::EightMilliAmps);
-    i2s_dac_data.set_slew_rate(bsp::hal::gpio::OutputSlewRate::Fast);
-    let _i2s_bit_clock: Pin<bsp::hal::gpio::bank0::Gpio27, FunctionPio1, PullNone> =
+    i2s_dac_data.set_drive_strength(gpio::OutputDriveStrength::EightMilliAmps);
+    i2s_dac_data.set_slew_rate(gpio::OutputSlewRate::Fast);
+    let _i2s_bit_clock: gpio::Pin<gpio::bank0::Gpio27, gpio::FunctionPio1, gpio::PullNone> =
         pins.gpio27.reconfigure();
-    let _i2s_lr_clock: Pin<bsp::hal::gpio::bank0::Gpio28, FunctionPio1, PullNone> =
+    let _i2s_lr_clock: gpio::Pin<gpio::bank0::Gpio28, gpio::FunctionPio1, gpio::PullNone> =
         pins.gpio28.reconfigure();
 
     let mut player = i2s::init(pac.PIO1, &mut pac.RESETS);
