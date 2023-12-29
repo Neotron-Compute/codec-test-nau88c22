@@ -225,6 +225,33 @@ fn main() -> ! {
         defmt::Debug2Format(&codec.read_powermanagement2().map_err(clean_error))
     );
 
+    // Activate "Boost" mode because VDDSPK = VDDA * 1.5 (we used 5V supply)
+    codec
+        .modify_outputcontrol(|mut w| {
+            w.tsen_set(true);
+            w.aux1bst_set(true);
+            w.aux2bst_set(true);
+            w.spkbst_set(true);
+            w
+        })
+        .unwrap();
+    info!(
+        "outputcontrol = {:?}",
+        defmt::Debug2Format(&codec.read_outputcontrol().map_err(clean_error))
+    );
+
+    // Invert right speaker out for Bridge-Tied-Load (i.e. mono) mode
+    codec
+        .modify_rightspeakersubmix(|mut w| {
+            w.rsubbyp_set(true);
+            w
+        })
+        .unwrap();
+    info!(
+        "rightspeakersubmix = {:?}",
+        defmt::Debug2Format(&codec.read_rightspeakersubmix().map_err(clean_error))
+    );
+
     // Set to "clock output" mode
     codec
         .modify_clockcontrol1(|mut w| {
