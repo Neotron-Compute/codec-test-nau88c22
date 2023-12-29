@@ -1896,16 +1896,14 @@ fn main() -> ! {
                     }
 
                     ("play", None, None) => {
-                        writeln!(uart, "Playing audio sample...").unwrap();
-                        let mut count = 0;
+                        writeln!(uart, "Looping audio sample...").unwrap();
                         let mut sample_buffer = &CLIP[..];
-                        while count < CLIP.len() {
+                        loop {
                             let read = player.play_samples_16bit_stereo(sample_buffer);
-                            if read != 0 {
-                                writeln!(uart, "Loaded {read} bytes").unwrap();
-                            }
-                            count += read;
                             sample_buffer = &sample_buffer[read..];
+                            if sample_buffer.is_empty() {
+                                sample_buffer = &CLIP[..];
+                            }
                             if let nb::Result::Ok(0x1B) = uart.read() {
                                 writeln!(uart, "Break!").unwrap();
                                 break;
