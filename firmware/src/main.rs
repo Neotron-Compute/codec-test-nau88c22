@@ -144,7 +144,7 @@ fn main() -> ! {
         cortex_m::interrupt::enable();
     }
 
-    let mut codec = nau88c22::Codec::new(i2c, Some(12_288_000));
+    let mut codec = nau88c22::Codec::new(i2c);
 
     let _ = codec.reset();
 
